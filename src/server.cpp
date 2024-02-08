@@ -2,37 +2,35 @@
 #include "protocol.h"
 #include "util.h"
 
-void handle_client(int server_fd, int client_socket, connection_state &conn_state) {
-    // Client -> server messages
-    LOG("In client thread");
-    char buffer[1024] = {0};
-    ssize_t valread;
-    while (1) {
-        memset(&buffer, 0, sizeof(buffer));
-        valread = recv(client_socket, (char*)&buffer, sizeof(buffer), 0);
-        if (valread > 0) {
-            send(server_fd, buffer, valread, 0);
-            handle_serverbound(buffer, valread, conn_state);
-        }
-    }
-}
-
-void handle_server(int server_fd, int client_socket, connection_state &conn_state) {
-    // Server -> client messages
+void tinycraftServer::server_handler(int client_socket, serverState &server_state) {
+    // Handles a client connection
     LOG("In server thread");
     char buffer[4096] = {0};
+    char response[4096] = {0};
+    int response_length = 0;
     ssize_t valread;
     while (1) {
         memset(&buffer, 0, sizeof(buffer));
-        valread = recv(server_fd, (char*)&buffer, sizeof(buffer), 0);
+        memset(&response, 0, sizeof(response));
+        response_length = 0;
+        valread = recv(client_socket, (char*)&buffer, sizeof(buffer), 0);
         if (valread > 0) {
-            send(client_socket, buffer, valread, 0);
-            handle_clientbound(buffer, valread, conn_state);
+            handle_message(buffer, valread, server_state, response, &response_length);
+            if (response_length > 0) {
+                send(client_socket, response, response_length, 0);
+
+                std::vector<char> response_msg(response, response + response_length);
+                printf("server -> client:");
+                for (auto c: response_msg) {
+                    printf(" %02x", c);
+                }
+                printf("\n");
+            }
         }
     }
 }
 
-void start_server() {
+void tinycraftServer::start_server() {
     // Wait for a client to connect
     uint16_t client_port = 55555;
     int client_fd, client_socket;
@@ -72,41 +70,14 @@ void start_server() {
     }
     LOG("Got client connection.");
 
-    // Create actual server connection
-    std::string server_hostname = "192.168.137.1"; // Or IP
-    uint16_t server_port = 25565;
+    serverState server_state;
+    server_state.conn_state = Handshaking;
 
-    int server_fd, status;
-    struct sockaddr_in serv_addr;
-    if ((server_fd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
-        perror("Socket creation");
-        exit(EXIT_FAILURE);
-    }
-
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(server_port);
-
-    if (inet_pton(AF_INET, server_hostname.c_str(), &serv_addr.sin_addr) <= 0) {
-        perror("Invalid hostname");
-        exit(EXIT_FAILURE);
-    }
-
-    if ((status = connect(server_fd, (struct sockaddr*)&serv_addr, sizeof(serv_addr))) < 0) {
-        perror("Connection failed");
-        exit(EXIT_FAILURE);
-    }
-
-    connection_state conn_state = Handshaking;
-
-    LOG("Starting server thread");
-    std::thread server_thread(handle_server, server_fd, client_socket, std::ref(conn_state));
     LOG("Starting client thread");
-    std::thread client_thread(handle_client, server_fd, client_socket, std::ref(conn_state));
+    std::thread server_thread(tinycraftServer::server_handler, client_socket, std::ref(server_state));
 
     server_thread.join();
-    client_thread.join();
 
-    close(server_fd);
     close(client_socket);
     close(client_fd);
 }

@@ -3,6 +3,7 @@
 
 int main() {
     LOG("tinycraft starting!");
-    start_server();
+    tinycraftServer server;
+    server.start_server();
     return 0;
 }

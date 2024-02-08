@@ -12,13 +12,13 @@ void msg_handshake(std::vector<char> message, connection_state &conn_state) {
     cur_message_offset += 2;
     int next_state_val = 0;
     std::tie(next_state_val, cur_message_offset) = read_varint(message, cur_message_offset);
-    connection_state next_state{next_state_val};
-    conn_state = next_state;
+    //connection_state next_state{next_state_val};
+    //conn_state = next_state;
 
     LOG("Handshake");
     LOG(protocol_version);
     LOG(server_address);
     LOG(server_port);
-    LOG(next_state);
+    //LOG(next_state);
     LOG("");
 }

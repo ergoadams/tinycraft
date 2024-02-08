@@ -1,6 +1,6 @@
 #include "protocol.h"
 
-void parse_message(std::vector<char> message, bool serverbound, connection_state &conn_state) {
+/*void parse_message(std::vector<char> message, bool serverbound, serverState &server_state) {
     int cur_message_offset = 0;
     int message_length = 0;
     int packet_id = 0;
@@ -95,26 +95,15 @@ void parse_message(std::vector<char> message, bool serverbound, connection_state
         }
         cur_message_offset += message_length - 1;
     }
-}
+}*/
 
-void handle_serverbound(char* buffer, int bytes_read, connection_state &conn_state) {
+void handle_message(char* buffer, int bytes_read, serverState &server_state, char* response, int* response_length) {
     std::vector<char> message(buffer, buffer + bytes_read);
     printf("client -> server:");
     for (auto c: message) {
         printf(" %02x", c);
     }
     printf("\n");
-
-    parse_message(message, true, conn_state);
-}
-
-void handle_clientbound(char* buffer, int bytes_read, connection_state &conn_state) {
-    std::vector<char> message(buffer, buffer + bytes_read);
-    printf("server -> client:");
-    for (auto c: message) {
-        printf(" %02x", c);
-    }
-    printf("\n");
-    parse_message(message, false, conn_state);
-    
+    *response_length = 0;
+    //parse_message(message, false, conn_state);
 }
